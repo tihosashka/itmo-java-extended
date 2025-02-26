@@ -1,12 +1,9 @@
 package com.example.itmo.extended.service.impl;
 
-import com.example.itmo.extended.model.db.entity.Cars;
 import com.example.itmo.extended.model.db.entity.User;
 import com.example.itmo.extended.model.db.repository.UserRepository;
 import com.example.itmo.extended.model.dto.request.UserInfoReq;
 import com.example.itmo.extended.model.dto.response.UserInfoResp;
-import com.example.itmo.extended.model.enums.CarsStatus;
-import com.example.itmo.extended.model.enums.Gender;
 import com.example.itmo.extended.model.enums.UserStatus;
 import com.example.itmo.extended.service.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -41,7 +38,9 @@ public class UserServiceImpl implements UserService {
         User user = getUserFromDB(id);
         return mapper.convertValue(user, UserInfoResp.class);
     }
-    private User getUserFromDB(Long id) {
+
+    @Override
+    public User getUserFromDB(Long id) {
         Optional<User> optionalUser = userRepository.findById(id);
         return optionalUser.orElse(new User());
     }
@@ -84,6 +83,11 @@ public class UserServiceImpl implements UserService {
         return userRepository.findAll().stream()
                 .map(user -> mapper.convertValue(user, UserInfoResp.class))
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public User updateCarList(User updatedUser) {
+        return userRepository.save(updatedUser);
     }
 
 }

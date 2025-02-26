@@ -3,6 +3,7 @@ package com.example.itmo.extended.model.db.entity;
 import com.example.itmo.extended.model.enums.CarType;
 import com.example.itmo.extended.model.enums.CarsStatus;
 import com.example.itmo.extended.model.enums.Color;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
@@ -54,6 +55,10 @@ public class Cars {
     @Column(name= "status")
     @Enumerated(EnumType.STRING)
     private CarsStatus status;
+
+    @ManyToOne
+    @JsonBackReference(value = "driver_cars")
+    private User user;
 
 
 }
