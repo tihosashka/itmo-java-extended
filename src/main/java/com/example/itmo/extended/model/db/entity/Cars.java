@@ -44,6 +44,9 @@ public class Cars {
     @Enumerated(EnumType.STRING)
     private CarType type;
 
+    @Column(name = "serial_number")
+    private Integer serialNumber;
+
     @CreationTimestamp
     @Column(name= "created_at")
     private LocalDateTime createdAt;

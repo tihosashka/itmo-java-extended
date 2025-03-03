@@ -1,5 +1,6 @@
 package com.example.itmo.extended.service.impl;
 
+import com.example.itmo.extended.exception.CommonBackendException;
 import com.example.itmo.extended.model.db.entity.User;
 import com.example.itmo.extended.model.db.repository.UserRepository;
 import com.example.itmo.extended.model.dto.request.UserInfoReq;
@@ -9,6 +10,8 @@ import com.example.itmo.extended.service.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.validator.routines.EmailValidator;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -24,6 +27,13 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserInfoResp addUser(UserInfoReq req) {
+        if (!EmailValidator.getInstance().isValid(req.getEmail())) {
+            throw new CommonBackendException("Email invalid", HttpStatus.BAD_REQUEST);
+        }
+        userRepository.findByEmail(req.getEmail()).ifPresent(user -> {
+            throw new CommonBackendException("User already exists", HttpStatus.CONFLICT);
+        });
+
         User user = mapper.convertValue(req, User.class);
         user.setStatus(UserStatus.CREATED);
 
@@ -42,16 +52,14 @@ public class UserServiceImpl implements UserService {
     @Override
     public User getUserFromDB(Long id) {
         Optional<User> optionalUser = userRepository.findById(id);
-        return optionalUser.orElse(new User());
+        final String errMsg = String.format("User with id %s not found", id);
+        return optionalUser.orElseThrow(() -> new CommonBackendException(errMsg, HttpStatus.NOT_FOUND));
     }
 
     @Override
     public UserInfoResp updateUser(Long id, UserInfoReq req) {
         User userFromDB = getUserFromDB(id);
-        if (userFromDB.getId() == null) {
-            return mapper.convertValue(userFromDB, UserInfoResp.class);
 
-        }
         User userReq = mapper.convertValue(req, User.class);
         userFromDB.setEmail(userReq.getEmail()==null ? userFromDB.getEmail(): userReq.getEmail());
         userFromDB.setPassword(userReq.getPassword()==null ? userFromDB.getPassword(): userReq.getPassword());
@@ -68,10 +76,6 @@ public class UserServiceImpl implements UserService {
     @Override
     public void deleteUser(Long id) {
         User userFromDB = getUserFromDB(id);
-        if (userFromDB.getId() == null) {
-            log.error("User with id {} not found", id);
-            return;
-        }
         userFromDB.setStatus(UserStatus.DELETED);
         userRepository.save(userFromDB);
 
@@ -89,5 +93,13 @@ public class UserServiceImpl implements UserService {
     public User updateCarList(User updatedUser) {
         return userRepository.save(updatedUser);
     }
+
+//    public User getUserDBNotDeleted(Long id) {
+//      return getUserDBAndStatusIn(id, Arrays.stream(UserStatus.values()).filter(status -> status == UserStatus.DELETED).collect(Collectors.toList()) );
+//    }
+//
+//
+//    public User getUserDBAndStatusIn(Long id, List<UserStatus> statuses) {
+//
 
 }

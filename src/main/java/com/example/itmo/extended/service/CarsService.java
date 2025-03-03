@@ -1,5 +1,6 @@
 package com.example.itmo.extended.service;
 
+import com.example.itmo.extended.exception.CommonBackendException;
 import com.example.itmo.extended.model.db.entity.Cars;
 import com.example.itmo.extended.model.db.entity.User;
 import com.example.itmo.extended.model.db.repository.CarsRepository;
@@ -8,13 +9,16 @@ import com.example.itmo.extended.model.dto.response.CarsInfoResp;
 import com.example.itmo.extended.model.dto.response.UserInfoResp;
 import com.example.itmo.extended.model.enums.CarsStatus;
 import com.example.itmo.extended.utils.PaginationUtils;
+import com.fasterxml.jackson.core.io.JsonStringEncoder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.validator.routines.EmailValidator;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -31,6 +35,9 @@ public class CarsService {
     private final UserService userService;
 
     public CarsInfoResp addCar(CarsInfoReq req) {
+        carsRepository.findBySerialNumber(req.getSerialNumber()).ifPresent(cars -> {
+            throw new CommonBackendException("Car already exists", HttpStatus.CONFLICT);
+        });
         Cars cars = mapper.convertValue(req, Cars.class);
         cars.setStatus(CarsStatus.CREATED);
 
@@ -46,15 +53,13 @@ public class CarsService {
 
     private Cars getCarsFromDB(Long id) {
         Optional<Cars> optionalCars = carsRepository.findById(id);
-        return optionalCars.orElse(new Cars());
+        final String errMsg = String.format("Car with id %s not found", id);
+        return optionalCars.orElseThrow(() -> new CommonBackendException(errMsg, HttpStatus.NOT_FOUND));
     }
 
     public CarsInfoResp updateCar(Long id, CarsInfoReq req) {
         Cars carFromDB = getCarsFromDB(id);
-        if (carFromDB.getId() == null) {
-            return mapper.convertValue(carFromDB, CarsInfoResp.class);
 
-        }
         Cars carReq = mapper.convertValue(req, Cars.class);
         carFromDB.setBrand(carReq.getBrand() == null ? carFromDB.getBrand() : carReq.getBrand());
         carFromDB.setModel(carReq.getModel() == null ? carFromDB.getModel() : carReq.getModel());
@@ -63,6 +68,7 @@ public class CarsService {
         carFromDB.setYear(carReq.getYear() == null ? carFromDB.getYear() : carReq.getYear());
         carFromDB.setType(carReq.getType() == null ? carFromDB.getType() : carReq.getType());
         carFromDB.setColor(carReq.getColor() == null ? carFromDB.getColor() : carReq.getColor());
+        carFromDB.setSerialNumber(carReq.getSerialNumber() == null ? carFromDB.getSerialNumber() : carReq.getSerialNumber());
 
 
         carFromDB = carsRepository.save(carFromDB);
@@ -71,10 +77,7 @@ public class CarsService {
 
     public void deleteCar(Long id) {
         Cars carsFromDB = getCarsFromDB(id);
-        if (carsFromDB.getId() == null) {
-            log.error("Car with id {} not found", id);
-            return;
-        }
+
         carsFromDB.setStatus(CarsStatus.DELETED);
         carsRepository.save(carsFromDB);
     }
